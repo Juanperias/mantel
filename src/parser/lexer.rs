@@ -1,0 +1,38 @@
+use logos::Logos;
+
+use super::ast::SyntaxKind;
+
+#[derive(Logos, Debug)]
+#[logos(skip r"[ \t\n\f]+")]
+pub enum Token {
+    #[regex("(?i)SELECT")]
+    Select,
+
+    #[regex("(?i)FROM")]
+    From,
+
+    #[regex(r#"(?:"[^"]*"|'[^']*')"#, |lex| {
+        let content = lex.slice();
+        content[1..content.len()-1].to_string()
+    })]
+    Text(String),
+
+    #[regex(r"[a-zA-Z_]+", |lex| lex.slice().to_string())]
+    Identifier(String),
+
+    #[token("*")]
+    All,
+}
+
+impl Token {
+    #[inline]
+    pub(crate) fn to_syntax(&self) -> (SyntaxKind, String) {
+        match &self {
+            Token::All => (SyntaxKind::ALL, String::from("*")),
+            Token::Select => (SyntaxKind::SELECT, String::from("SELECT")),
+            Token::Identifier(i) => (SyntaxKind::IDENTIFIER, String::from(i)),
+            Token::From => (SyntaxKind::FROM, String::from("FROM")),
+            Token::Text(t) => (SyntaxKind::TEXT, String::from(t)),
+        }
+    }
+}
