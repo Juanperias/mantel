@@ -18,13 +18,13 @@ pub enum AstError {
 #[allow(non_camel_case_types)]
 #[repr(u16)]
 pub enum SyntaxKind {
-    ROOT,
-    WHITESPACE,
+    WHITESPACE = 0,
     SELECT,
     FROM,
     IDENTIFIER,
     TEXT,
     ALL,
+    ROOT,
 }
 
 use SyntaxKind::*;
@@ -36,7 +36,7 @@ impl From<SyntaxKind> for rowan::SyntaxKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Lang {}
+pub enum Lang {}
 impl rowan::Language for Lang {
     type Kind = SyntaxKind;
     fn kind_from_raw(raw: rowan::SyntaxKind) -> Self::Kind {
@@ -48,16 +48,16 @@ impl rowan::Language for Lang {
     }
 }
 
-type SyntaxNode = rowan::SyntaxNode<Lang>;
-type SyntaxToken = rowan::SyntaxToken<Lang>;
-type SyntaxElement = NodeOrToken<SyntaxNode, SyntaxToken>;
+pub type SyntaxNode = rowan::SyntaxNode<Lang>;
+pub type SyntaxToken = rowan::SyntaxToken<Lang>;
+pub type SyntaxElement = NodeOrToken<SyntaxNode, SyntaxToken>;
 
-pub struct Parser<I: Iterator<Item = (SyntaxKind, String)>> {
+pub struct Parser {
     builder: GreenNodeBuilder<'static>,
-    iter: Peekable<I>,
+    iter: Peekable<std::vec::IntoIter<(SyntaxKind, String)>>,
 }
 
-impl<I: Iterator<Item = (SyntaxKind, String)>> Parser<I> {
+impl Parser {
     fn peek(&mut self) -> Option<SyntaxKind> {
         while self
             .iter
@@ -69,17 +69,36 @@ impl<I: Iterator<Item = (SyntaxKind, String)>> Parser<I> {
         }
         self.iter.peek().map(|&(t, _)| t)
     }
+    fn next(&mut self) {
+        self.iter.next();
+    }
     fn bump(&mut self) {
         if let Some((token, string)) = self.iter.next() {
             self.builder.token(token.into(), string.as_str());
         }
     }
     fn handle_val(&mut self) {
-        match self.peek () {
+        match self.peek().unwrap() {
+            SELECT => {
+                self.builder.start_node_at(self.builder.checkpoint(), SELECT.into());
+               self.next(); 
+                while self.peek() != Some(FROM.into()) { self.bump(); }
+                
+                self.builder.start_node_at(self.builder.checkpoint(), FROM.into());
+                self.next();
+            
+                while self.peek().is_some() { self.bump(); }
+                
+
+                self.builder.finish_node();
+
+                self.builder.finish_node();
+
+            },
             _ => {},
         }
     }
-    fn parse(mut self) -> SyntaxNode {
+    pub fn parse(mut self) -> SyntaxNode {
         self.builder.start_node(ROOT.into());
 
         while let Some(_) = self.peek() {
@@ -90,7 +109,7 @@ impl<I: Iterator<Item = (SyntaxKind, String)>> Parser<I> {
 
         SyntaxNode::new_root(self.builder.finish())
     }
-    fn from_tokens(lex: &mut Lexer<'_, Token>) -> Result<Parser<std::vec::IntoIter<(SyntaxKind, String)>>, AstError> {
+    pub fn from_tokens(lex: &mut Lexer<'_, Token>) -> Result<Parser, AstError> {
         let mut nodes = Vec::new();
 
         while let Some(token) = lex.next() {
