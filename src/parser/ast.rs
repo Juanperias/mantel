@@ -15,6 +15,9 @@ pub enum AstError {
 
     #[error("Trailing Comma is not allowed")]
     TrailingComma,
+
+    #[error("Expected {0} found {1}")]
+    ExpectedType(SyntaxKind, SyntaxKind),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -28,7 +31,14 @@ pub enum SyntaxKind {
     TEXT,
     ALL,
     COMMA,
+    NUMBER,
     ROOT,
+}
+
+impl std::fmt::Display for SyntaxKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 use SyntaxKind::*;
@@ -102,6 +112,10 @@ impl Parser {
                             return Err(AstError::TrailingComma);
                         }
                         continue;
+                    }
+
+                    if token != IDENTIFIER {
+                        return Err(AstError::ExpectedType(IDENTIFIER, token));
                     }
 
                     self.bump();

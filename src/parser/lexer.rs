@@ -20,6 +20,9 @@ pub enum Token {
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Identifier(String),
 
+    #[regex(r"[0-9]+", |lex| lex.slice().to_string())]
+    Number(String),
+
     #[token("*")]
     All,
 
@@ -36,6 +39,7 @@ impl Token {
             Token::Identifier(i) => (SyntaxKind::IDENTIFIER, String::from(i)),
             Token::From => (SyntaxKind::FROM, String::from("FROM")),
             Token::Text(t) => (SyntaxKind::TEXT, String::from(t)),
+            Token::Number(n) => (SyntaxKind::NUMBER, String::from(n)),
             Token::Comma => (SyntaxKind::COMMA, String::from(",")),
         }
     }
