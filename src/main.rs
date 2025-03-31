@@ -1,5 +1,4 @@
-use mantel::parser;
-use logos::Logos;
+use mantel::SqlBuilder;
 use rowan::NodeOrToken;
 
 fn print(indent: usize, element: mantel::parser::ast::SyntaxElement) {
@@ -18,7 +17,7 @@ fn print(indent: usize, element: mantel::parser::ast::SyntaxElement) {
 }
 
 fn main() {
-    let mut lex = parser::lexer::Token::lexer("SeLect * FROM table");
-    let parser = parser::ast::Parser::from_tokens(&mut lex).unwrap().parse();
-    print(0, parser.into());
+    let ast = SqlBuilder::from("SELECT * FROM TABLE".to_string())
+        .build().unwrap();
+    print(0, ast.into());
 }
