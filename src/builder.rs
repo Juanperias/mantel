@@ -1,4 +1,7 @@
-use super::parser::{lexer::Token, ast::{Parser, SyntaxNode, AstError}};
+use super::parser::{
+    ast::{AstError, Parser, SyntaxNode},
+    lexer::Token,
+};
 use logos::Logos;
 
 pub struct SqlBuilder {
@@ -7,12 +10,12 @@ pub struct SqlBuilder {
 
 impl SqlBuilder {
     pub fn build(self) -> Result<SyntaxNode, AstError> {
-        Ok(Parser::from_tokens(&mut Token::lexer(&self.code))?.parse())
+        Ok(Parser::from_tokens(&mut Token::lexer(&self.code))?.parse()?)
     }
 }
 
 impl From<String> for SqlBuilder {
     fn from(code: String) -> Self {
-        Self { code  }
+        Self { code }
     }
 }

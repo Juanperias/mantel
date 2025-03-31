@@ -17,7 +17,8 @@ fn print(indent: usize, element: mantel::parser::ast::SyntaxElement) {
 }
 
 fn main() {
-    let ast = SqlBuilder::from("SELECT * FROM TABLE".to_string())
-        .build().unwrap();
+    let ast = SqlBuilder::from("SELECT * FROM TABLE, TABLE2,".to_string())
+        .build()
+        .unwrap();
     print(0, ast.into());
 }

@@ -12,6 +12,9 @@ use thiserror::Error;
 pub enum AstError {
     #[error("Invalid Token {0}")]
     InvalidToken(String),
+
+    #[error("Trailing Comma is not allowed")]
+    TrailingComma,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -24,6 +27,7 @@ pub enum SyntaxKind {
     IDENTIFIER,
     TEXT,
     ALL,
+    COMMA,
     ROOT,
 }
 
@@ -77,37 +81,51 @@ impl Parser {
             self.builder.token(token.into(), string.as_str());
         }
     }
-    fn handle_val(&mut self) {
+    fn handle_val(&mut self) -> Result<(), AstError> {
         match self.peek().unwrap() {
             SELECT => {
-                self.builder.start_node_at(self.builder.checkpoint(), SELECT.into());
-               self.next(); 
-                while self.peek() != Some(FROM.into()) { self.bump(); }
-                
-                self.builder.start_node_at(self.builder.checkpoint(), FROM.into());
+                self.builder
+                    .start_node_at(self.builder.checkpoint(), SELECT.into());
                 self.next();
-            
-                while self.peek().is_some() { self.bump(); }
-                
+                while self.peek() != Some(FROM.into()) {
+                    self.bump();
+                }
+
+                self.builder
+                    .start_node_at(self.builder.checkpoint(), FROM.into());
+                self.next();
+
+                while let Some(token) = self.peek() {
+                    if token == COMMA {
+                        self.next();
+                        if self.peek() != Some(IDENTIFIER) {
+                            return Err(AstError::TrailingComma);
+                        }
+                        continue;
+                    }
+
+                    self.bump();
+                }
 
                 self.builder.finish_node();
 
                 self.builder.finish_node();
-
-            },
-            _ => {},
+            }
+            _ => {}
         }
+
+        Ok(())
     }
-    pub fn parse(mut self) -> SyntaxNode {
+    pub fn parse(mut self) -> Result<SyntaxNode, AstError> {
         self.builder.start_node(ROOT.into());
 
         while let Some(_) = self.peek() {
-            self.handle_val()
+            self.handle_val()?;
         }
 
         self.builder.finish_node();
 
-        SyntaxNode::new_root(self.builder.finish())
+        Ok(SyntaxNode::new_root(self.builder.finish()))
     }
     pub fn from_tokens(lex: &mut Lexer<'_, Token>) -> Result<Parser, AstError> {
         let mut nodes = Vec::new();
